@@ -16,8 +16,8 @@ import speech_recognition as sr
 
 import pygame
 
-from openai import OpenAI  # GPT integration
-import pyttsx3  # local TTS
+from openai import OpenAI  # Lets Jarvis use GPT when a command is not one of my built-in actions.
+import pyttsx3  # Handles the local text-to-speech voice.
 
 
 # ---------- API KEYS ----------
@@ -59,11 +59,12 @@ class JarvisApp:
 
         self.running = False
         self.thread = None
-        # Background listener threads write here; the Tkinter UI reads it safely on the main thread.
+        # The listening code runs in the background, so I send log messages through a queue first.
+        # Tkinter can then display them safely from the main window thread.
         self.log_queue = queue.Queue()
         self.root.after(100, self.process_logs)
 
-        # Tracks short follow-up conversations so the user does not need to repeat the wake word.
+        # These two values let Jarvis handle a short follow-up answer without needing the wake word again.
         self.conversation_mode = False
         self.followup_timeout = 0
 
@@ -74,7 +75,7 @@ class JarvisApp:
         self.log_queue.put(msg)
 
     def process_logs(self):
-        # Tkinter widgets should be updated from the main thread, so logs are drained here.
+        # This keeps all UI updates in one place, which helps prevent Tkinter threading issues.
         while not self.log_queue.empty():
             line = self.log_queue.get_nowait()
             self.log_box.config(state=tk.NORMAL)
@@ -85,7 +86,7 @@ class JarvisApp:
 
     # ---------- TTS Worker (pyttsx3) ----------
     def tts_worker(self, text):
-        # pyttsx3 can block while speaking, so each response is spoken on a background thread.
+        # Speaking can take a few seconds, so this runs separately to avoid freezing the app.
         try:
             engine = pyttsx3.init()
             # Optional tweaks:
@@ -114,7 +115,7 @@ class JarvisApp:
 
             audio = sd.rec(int(seconds * fs), samplerate=fs, channels=1, dtype='int16')
             sd.wait()
-            # SpeechRecognition reads from a file, so the microphone sample is saved temporarily.
+            # I save the microphone recording as a temporary WAV because SpeechRecognition reads audio files well.
             write(TEMP_WAV, fs, audio)
             return TEMP_WAV
         except Exception as e:
@@ -144,7 +145,7 @@ class JarvisApp:
     # ---------- GPT ----------
     def ask_gpt(self, text):
         try:
-            # The prompt keeps GPT responses short enough for a desktop voice assistant.
+            # If the command does not match one of my built-in actions, GPT gives Jarvis a short response.
             prompt = (
                 "You are Jarvis, a friendly desktop assistant. "
                 "Respond briefly and naturally.\n\nUser: " + text
@@ -162,7 +163,7 @@ class JarvisApp:
     def parse_timer_duration(self, cmd):
         text = cmd.lower()
 
-        # Supports both digit-based timers ("5 minutes") and short word-based timers ("five minutes").
+        # This checks for timer phrases like "5 minutes" before trying word numbers like "five minutes".
         m = re.search(r'(\d+)\s*(second|seconds|minute|minutes|hour|hours)', text)
         amount = None
         unit = None
@@ -212,10 +213,10 @@ class JarvisApp:
             self.conversation_mode = False
             return
 
-        # By default, assume no follow-up unless GPT asks a question
+        # Each new command starts fresh unless GPT replies with a question and needs a follow-up.
         self.conversation_mode = False
 
-        # Timers
+        # Timer commands are handled first because they have their own parsing helper.
         if "timer" in cmd or "alarm" in cmd:
             if self.handle_timer_command(cmd):
                 return
@@ -269,12 +270,12 @@ class JarvisApp:
             os.system("taskkill /f /im pycharm.exe")
             return
 
-        # GPT fallback
+        # If nothing above matched, Jarvis treats it like a general question and asks GPT.
         reply = self.ask_gpt(cmd)
         if reply:
             self.speak(reply)
 
-            # If GPT asks a question, keep listening briefly for a natural follow-up answer.
+            # A question mark is my signal to keep listening for a short follow-up answer.
             if reply.strip().endswith("?"):
                 self.conversation_mode = True
                 self.followup_timeout = time.time() + 12  # 20 seconds to answer
@@ -287,7 +288,7 @@ class JarvisApp:
     # ---------- Searching Extract ----------
     def extract_search_query(self, cmd, service_keywords):
         text = cmd.lower()
-        # Remove wake words and service names so only the user's actual search phrase remains.
+        # This cleans the command down to the part the user actually wanted to search for.
         for wake in WAKE_WORDS:
             text = text.replace(wake, "")
 
@@ -319,17 +320,17 @@ class JarvisApp:
         self.speak("Jarvis online.")
 
         while self.running:
-            # Conversation mode listens for a direct answer before returning to wake-word mode.
+            # In conversation mode, Jarvis listens right away instead of waiting for "Jarvis" again.
             if self.conversation_mode and time.time() < self.followup_timeout:
                 cmd = self.listen(seconds=5, show_log=True)
                 self.handle_command(cmd)
-                # handle_command will decide whether to remain in conversation_mode
+                # handle_command decides whether the conversation should stay open or end.
                 continue
             else:
-                # timeout or not expecting follow-up anymore
+                # If the follow-up window expired, go back to normal wake-word listening.
                 self.conversation_mode = False
 
-            # Normal mode stays quiet until the wake word is detected.
+            # Normal mode keeps the assistant quiet until it hears the wake word.
             heard = self.listen(seconds=3, show_log=False)
             if not self.running:
                 break
@@ -369,4 +370,3 @@ if __name__ == "__main__":
     root = tk.Tk()
     app = JarvisApp(root)
     root.mainloop()
-
