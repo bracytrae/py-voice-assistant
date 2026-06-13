@@ -278,7 +278,7 @@ class JarvisApp:
             # A question mark is my signal to keep listening for a short follow-up answer.
             if reply.strip().endswith("?"):
                 self.conversation_mode = True
-                self.followup_timeout = time.time() + 12  # 20 seconds to answer
+                self.followup_timeout = time.time() + 12  # Gives about 12 seconds to answer.
             else:
                 self.conversation_mode = False
         else:
