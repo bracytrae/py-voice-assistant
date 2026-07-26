@@ -38,7 +38,7 @@ pip install openai pyttsx3 pygame sounddevice scipy SpeechRecognition
 Then run:
 
 ```bash
-python Novavoiceassistant.py
+python nova_voice_assistant.py
 ```
 
 You will also need to add your own OpenAI API key before using GPT responses.
