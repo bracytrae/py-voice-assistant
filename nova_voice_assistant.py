@@ -16,7 +16,7 @@ import speech_recognition as sr
 
 import pygame
 
-from openai import OpenAI  # Lets Jarvis use GPT when a command is not one of my built-in actions.
+from openai import OpenAI  # Lets Nova use GPT when a command is not one of my built-in actions.
 import pyttsx3  # Handles the local text-to-speech voice.
 
 
@@ -25,15 +25,15 @@ OPENAI_API_KEY = "KEY"
 
 gpt_client = OpenAI(api_key=OPENAI_API_KEY)
 
-WAKE_WORDS = ["hey jarvis", "okay jarvis", "yo jarvis", "jarvis"]
+WAKE_WORDS = ["hey nova", "okay nova", "yo nova", "nova"]
 TEMP_WAV = "temp_input.wav"
 
 
-class JarvisApp:
+class NovaApp:
 
     def __init__(self, root):
         self.root = root
-        self.root.title("Jarvis Voice Assistant")
+        self.root.title("Nova Voice Assistant")
         self.root.geometry("600x450")
 
         self.status_label = tk.Label(root, text="Status: Idle", font=("Arial", 12))
@@ -45,10 +45,10 @@ class JarvisApp:
         btn_frame = tk.Frame(root)
         btn_frame.pack(pady=5)
 
-        self.start_button = tk.Button(btn_frame, text="Initiate Jarvis", command=self.start_listening, width=12)
+        self.start_button = tk.Button(btn_frame, text="Initiate Nova", command=self.start_listening, width=12)
         self.start_button.grid(row=0, column=0, padx=5)
 
-        self.stop_button = tk.Button(btn_frame, text="Stop Jarvis", command=self.stop_listening, state=tk.DISABLED, width=12)
+        self.stop_button = tk.Button(btn_frame, text="Stop Nova", command=self.stop_listening, state=tk.DISABLED, width=12)
         self.stop_button.grid(row=0, column=1, padx=5)
 
         self.quit_button = tk.Button(btn_frame, text="Quit", command=self.quit_app, width=12)
@@ -64,11 +64,11 @@ class JarvisApp:
         self.log_queue = queue.Queue()
         self.root.after(100, self.process_logs)
 
-        # These two values let Jarvis handle a short follow-up answer without needing the wake word again.
+        # These two values let Nova handle a short follow-up answer without needing the wake word again.
         self.conversation_mode = False
         self.followup_timeout = 0
 
-        self.log("Jarvis ready.")
+        self.log("Nova ready.")
 
     # ---------- Logging ----------
     def log(self, msg):
@@ -100,7 +100,7 @@ class JarvisApp:
 
     # ---------- Speak ----------
     def speak(self, text):
-        self.log(f"Jarvis: {text}")
+        self.log(f"Nova: {text}")
 
         threading.Thread(target=self.tts_worker, args=(text,), daemon=True).start()
 
@@ -145,9 +145,9 @@ class JarvisApp:
     # ---------- GPT ----------
     def ask_gpt(self, text):
         try:
-            # If the command does not match one of my built-in actions, GPT gives Jarvis a short response.
+            # If the command does not match one of my built-in actions, GPT gives Nova a short response.
             prompt = (
-                "You are Jarvis, a friendly desktop assistant. "
+                "You are Nova, a friendly desktop assistant. "
                 "Respond briefly and naturally.\n\nUser: " + text
             )
             resp = gpt_client.responses.create(
@@ -261,7 +261,7 @@ class JarvisApp:
                 self.speak("Opening Spotify search.")
             return
 
-        # Shutdown Jarvis
+        # Shutdown Nova
         if "shutdown" in cmd or "shut down" in cmd or "power off" in cmd:
             self.speak("Shutting down systems.")
             self.running = False
@@ -270,7 +270,7 @@ class JarvisApp:
             os.system("taskkill /f /im pycharm.exe")
             return
 
-        # If nothing above matched, Jarvis treats it like a general question and asks GPT.
+        # If nothing above matched, Nova treats it like a general question and asks GPT.
         reply = self.ask_gpt(cmd)
         if reply:
             self.speak(reply)
@@ -317,10 +317,10 @@ class JarvisApp:
 
     # ---------- Listening Loop ----------
     def listen_loop(self):
-        self.speak("Jarvis online.")
+        self.speak("Nova online.")
 
         while self.running:
-            # In conversation mode, Jarvis listens right away instead of waiting for "Jarvis" again.
+            # In conversation mode, Nova listens right away instead of waiting for "Nova" again.
             if self.conversation_mode and time.time() < self.followup_timeout:
                 cmd = self.listen(seconds=5, show_log=True)
                 self.handle_command(cmd)
@@ -335,7 +335,7 @@ class JarvisApp:
             if not self.running:
                 break
 
-            if "jarvis" in (heard or "").lower():
+            if "Nova" in (heard or "").lower():
                 self.speak("Yes?")
                 cmd = self.listen(seconds=5, show_log=True)
                 self.handle_command(cmd)
@@ -368,5 +368,5 @@ class JarvisApp:
 
 if __name__ == "__main__":
     root = tk.Tk()
-    app = JarvisApp(root)
+    app = NovaApp(root)
     root.mainloop()
