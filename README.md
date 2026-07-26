@@ -7,7 +7,7 @@ This project is one of my larger Python practice builds because it combines a us
 ## Features
 
 - Desktop interface built with Tkinter
-- Wake-word listening for Jarvis-style commands
+- Wake-word listening for Nova-style commands
 - Speech recognition from recorded microphone input
 - Text-to-speech responses using `pyttsx3`
 - OpenAI API integration for natural responses
@@ -38,7 +38,7 @@ pip install openai pyttsx3 pygame sounddevice scipy SpeechRecognition
 Then run:
 
 ```bash
-python jarvisvoiceassistant.py
+python Novavoiceassistant.py
 ```
 
 You will also need to add your own OpenAI API key before using GPT responses.
